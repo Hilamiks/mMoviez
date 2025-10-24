@@ -1,0 +1,54 @@
+# Server specific
+Server/out
+Server/persistent
+
+# Golang
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+bin/
+vendor/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Go workspace file
+go.work
+
+# IDEs
+.idea/
+.vscode/
+*.iml
+*.swp
+*.swo
+
+# React/Node.js
+Client/node_modules/
+Client/build/
+Client/dist/
+Client/.env.local
+Client/.env.development.local
+Client/.env.test.local
+Client/.env.production.local
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
+
+# Testing
+Client/coverage/
+
+# Misc
+.env
+.env.local
+.DS_Store
+Thumbs.db
+
