@@ -9,13 +9,11 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
-	"github.com/go-playground/validator/v10"
 	"go.mongodb.org/mongo-driver/v2/bson"
 	"go.mongodb.org/mongo-driver/v2/mongo"
 )
 
 var movieCollection = database.OpenCollection("movies")
-var checker = validator.New()
 
 func GetMovies() gin.HandlerFunc {
 	return func(c *gin.Context) {
