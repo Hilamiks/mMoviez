@@ -20,6 +20,10 @@ func main() {
 	engine.GET("/movies", controller.GetMovies())
 	engine.GET("/movie/:imdb_id", controller.GetMovieByID())
 	engine.POST("/movie", controller.AddMovie())
+	engine.GET("/users", controller.GetUsers())
+	engine.GET("/user/:email", controller.GetUserByEmail())
+	engine.GET("/user/id/:user_id", controller.GetUserByID())
+	engine.POST("/user", controller.AddUser())
 
 	err := engine.Run(":8080")
 	if err != nil {
