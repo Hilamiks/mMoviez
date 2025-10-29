@@ -4,6 +4,7 @@ import (
 	"context"
 	"mMoviez/database"
 	"mMoviez/model"
+	"mMoviez/util"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -47,6 +48,7 @@ func AddUser() gin.HandlerFunc {
 			return
 		}
 
+		user.UserID = bson.NewObjectID().Hex()
 		user.Password = string(hashed)
 		user.CreatedAt = time.Now()
 		user.UpdatedAt = user.CreatedAt
@@ -60,70 +62,61 @@ func AddUser() gin.HandlerFunc {
 	}
 }
 
-func GetUsers() gin.HandlerFunc {
+func LoginUser() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-		defer cancel()
-		cursor, err := userCollection.Find(ctx, bson.M{})
+
+		var userLogin model.UserLogin
+
+		if err := c.ShouldBindJSON(&userLogin); err != nil {
+			c.JSON(400, gin.H{"error": "Invalid request body"})
+			return
+		}
+
+		err := checker.Struct(userLogin)
 		if err != nil {
-			c.JSON(500, gin.H{"error": "Error while fetching users"})
+			c.JSON(400, gin.H{"error": err})
 			return
 		}
 
-		var users []model.User
-		if err = cursor.All(ctx, &users); err != nil {
-			c.JSON(500, gin.H{"error": "Error while parsing users"})
-			return
-		}
-		c.JSON(200, users)
-	}
-}
-
-func GetUserByEmail() gin.HandlerFunc {
-	return func(c *gin.Context) {
 		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancel()
 
-		email := c.Param("email")
-
-		if email == "" {
-			c.JSON(400, gin.H{"error": "Email is required"})
-			return
-		}
-
-		var user model.User
-
-		err := userCollection.FindOne(ctx, bson.M{"email": email}).Decode(&user)
-
+		var foundUser model.User
+		err = userCollection.FindOne(ctx, bson.M{"email": userLogin.Email}).Decode(&foundUser)
 		if err != nil {
-			c.JSON(404, gin.H{"error": "User not found"})
+			c.JSON(401, gin.H{"error": "Invalid email or password"})
 			return
 		}
 
-		c.JSON(200, user)
-	}
-}
-
-func GetUserByID() gin.HandlerFunc {
-	return func(c *gin.Context) {
-		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-		defer cancel()
-
-		id := c.Param("user_id")
-		if id == "" {
-			c.JSON(400, gin.H{"error": "User ID is required"})
-			return
-		}
-
-		var user model.User
-
-		err := userCollection.FindOne(ctx, bson.M{"user_id": id}).Decode(&user)
-
+		err = bcrypt.CompareHashAndPassword([]byte(foundUser.Password), []byte(userLogin.Password))
 		if err != nil {
-			c.JSON(404, gin.H{"error": "User not found"})
+			c.JSON(401, gin.H{"error": "Invalid email or password"})
 			return
 		}
 
-		c.JSON(200, user)
+		token, refreshToken, err := util.GenerateAllTokens(foundUser.Email, foundUser.FirstName, foundUser.LastName, foundUser.UserID, foundUser.Role)
+		if err != nil {
+			c.JSON(500, gin.H{"error": "Error while generating tokens"})
+			return
+		}
+
+		err = util.UpdateAllTokens(foundUser.UserID, token, refreshToken)
+		if err != nil {
+			c.JSON(500, gin.H{"error": "Error while updating tokens"})
+			return
+		}
+
+		c.JSON(200,
+			&model.UserResponse{
+				UserID:          foundUser.UserID,
+				FirstName:       foundUser.FirstName,
+				LastName:        foundUser.LastName,
+				Email:           foundUser.Email,
+				Role:            foundUser.Role,
+				Token:           token,
+				RefreshToken:    refreshToken,
+				FavouriteGenres: foundUser.FavouriteGenres,
+			},
+		)
 	}
 }
